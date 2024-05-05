@@ -1,4 +1,20 @@
 <script lang="ts">
+	export let classes;
+
+	const day = {
+		Monday: 1,
+		Tuesday: 2,
+		Wednesday: 3,
+		Thursday: 4,
+		Friday: 5,
+		Saturday: 6,
+		Sunday: 7
+	};
+
+	$: {
+		console.log(classes);
+	}
+
 	import { Badge } from '$lib/components/ui/badge';
 	import { Event } from '$lib/components';
 	import { onMount } from 'svelte';
@@ -360,33 +376,22 @@
 							class="select-none col-start-1 col-end-2 row-start-1 grid grid-cols-1 sm:grid-cols-7 sm:pr-8"
 							style="grid-template-rows: 1.75rem repeat(288, minmax(0px, 1fr)) auto;"
 						>
-							<Event
-								col="3"
-								row="74"
-								space="12"
-								{onMouseDown}
-								{onMouseUp}
-								{touchstart}
-								{touchend}
-							/>
-							<Event
-								col="6"
-								row="122"
-								space="24"
-								{onMouseDown}
-								{onMouseUp}
-								{touchstart}
-								{touchend}
-							/>
-							<Event
-								col="3"
-								row="92"
-								space="30"
-								{onMouseDown}
-								{onMouseUp}
-								{touchstart}
-								{touchend}
-							/>
+							{#each classes as cl}
+								<Event
+									col={day[cl.time[0]]}
+									row={(cl.time[1] - 9) * 12 + 110}
+									space={cl.duration * 12}
+									teacher={cl.teacher}
+									subject={cl.subject}
+									groups={cl.groups}
+									time={cl.time}
+									classroom={cl.classroom}
+									{onMouseDown}
+									{onMouseUp}
+									{touchstart}
+									{touchend}
+								/>
+							{/each}
 						</ol>
 					</div>
 				</div>

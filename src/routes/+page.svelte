@@ -6,10 +6,95 @@
 	import * as Sheet from '$lib/components/ui/sheet';
 	import * as Command from '$lib/components/ui/command';
 	import { Button } from '$lib/components/ui/button';
+	import { Input } from '$lib/components/ui/input';
 	import { toggleMode } from 'mode-watcher';
 	import { Calendar } from '$lib/components';
 
 	let search = '';
+	let id = '';
+	let tt = [];
+	let loaded = false;
+
+	const uploadFile = async () => {
+		const input = document.getElementById('upload') as HTMLInputElement;
+		const button = document.querySelector('button[for="upload"]') as HTMLButtonElement;
+		if (input.files && input.files.length > 0) {
+			const file = input.files[0];
+			input.disabled = true;
+			button.disabled = true;
+
+			const contents = JSON.parse(await file.text());
+
+			let resp = fetch('http://localhost:8080/tt/new', {
+				method: 'POST',
+				body: JSON.stringify({ data: contents })
+			})
+				.then((res) => res.json())
+				.then((data) => {
+					console.log(data);
+					input.disabled = false;
+					button.disabled = false;
+					id = data['success'];
+				})
+				.catch((err) => {
+					console.error(err);
+					input.disabled = false;
+					button.disabled = false;
+				});
+		}
+	};
+
+	const formatTimeTable = (data) => {
+		let lines = data.split('\n');
+		lines = lines.slice(16);
+		let classes = lines.reduce((res, item, index) => {
+			const chunkIndex = Math.floor(index / 9);
+
+			if (!res[chunkIndex]) {
+				res[chunkIndex] = []; // start a new chunk
+			}
+
+			res[chunkIndex].push(item);
+			return res;
+		}, []);
+		let cls = [];
+		for (const cl of classes) {
+			let s = {
+				teacher: cl[2].split(':')[1].trim(),
+				subject: cl[3].split(':')[1].trim(),
+				groups: cl[4].split(':')[1].trim(),
+				duration: cl[6].split(':')[1].trim().split(' ')[0],
+				classroom: cl[7].split(':')[1].trim(),
+				time: cl[8].split(':')[1].trim().split(' ').slice(0, 2)
+			};
+			cls.push(s);
+		}
+		return cls;
+	};
+
+	let status_update = () => {
+		let resp = fetch(`http://localhost:8080/tt/status/${id}`)
+			.then((res) => res.json())
+			.then((data) => {
+				console.log(data);
+				let status = data['status'];
+				if (status == 'processing') {
+					setTimeout(status_update, 2000);
+					return;
+				}
+				tt = formatTimeTable(status);
+				loaded = true;
+			})
+			.catch((err) => {
+				console.error(err);
+			});
+	};
+
+	$: {
+		if (id != '' && !loaded) {
+			status_update();
+		}
+	}
 </script>
 
 <main class="flex flex-row h-screen">
@@ -70,6 +155,10 @@
 				<span class="text-lg font-bold justify-self-end">2021</span>
 				<span class="text-md">Single Batch</span>
 			</div>
+			<div class="mx-4 mt-4 w-auto flex flex-row gap-2">
+				<Input id="upload" type="file" />
+				<Button on:click={uploadFile} for="upload">Upload</Button>
+			</div>
 		</div>
 		<div class="mt-auto p-4 flex flex-row gap-2 items-center">
 			<Button on:click={toggleMode} variant="ghost" size="icon">
@@ -84,7 +173,7 @@
 			</Button>
 		</div>
 	</div>
-	<Calendar />
+	<Calendar classes={tt} />
 </main>
 
 <style>
